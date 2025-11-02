@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+    postgres:
+        image: postgres:15
+        container_name: invoice-postgres
+        environment:
+            POSTGRES_DB: postgres
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: yourpassword
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+            - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+    redis:
+        image: redis:7-alpine
+        container_name: invoice-redis
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+    invoice-scheduler:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: invoice-scheduler-job
+        ports:
+            - "5000:8080"
+            - "5001:8081"
+        environment:
+            - ASPNETCORE_ENVIRONMENT=Development
+            - ASPNETCORE_URLS=http://+:8080;https://+:8081
+            - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=invoice_system;Username=postgres;Password=yourpassword
+            - ConnectionStrings__HangfireConnection=Host=postgres;Port=5432;Database=hangfire_jobs;Username=postgres;Password=yourpassword
+            - Ipfs__ApiKey=${PINATA_API_KEY}
+            - Ipfs__ApiSecret=${PINATA_API_SECRET}
+            - Blockchain__RpcUrl=${ETHEREUM_RPC_URL:-https://rpc.ankr.com/eth_sepolia}
+            - Blockchain__PrivateKey=${ETHEREUM_PRIVATE_KEY}
+            - Blockchain__ContractAddress=${CONTRACT_ADDRESS}
+        depends_on:
+            postgres:
+                condition: service_healthy
+        restart: unless-stopped
+        volumes:
+            - ./logs:/app/logs
+
+volumes:
+    postgres_data:
+    redis_data:

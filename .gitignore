@@ -1,0 +1,97 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Bb]in/
+[Oo]bj/
+**/bin/
+**/obj/
+
+# Visual Studio cache/options
+*.VC.db
+*.VC.opendb
+
+# Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.user
+*.userprefs
+
+# Log files
+*.log
+logs/
+
+# NuGet
+*.nupkg
+# The packages folder can be ignored because of PackageReference
+packages/
+project.lock.json
+.nuget
+
+# Publish outputs
+publish/
+PublishOutput/
+
+# AspNet temp files
+App_Data/**/cache
+
+# Debug/Release directories
+**/Debug/
+**/Release/
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# IIS Express
+/.vs/config/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+
+# Environment files
+.env
+.env.*
+
+# Sensitive/Local config
+appsettings.Development.json
+secrets.json
+
+# dotnet user-secrets
+secrets/*.json
+
+# EF Migrations sqlite DB
+*.db
+*.sqlite
+
+# Rider caches
+.idea/
+
+# Docker
+docker-compose.override.yml
+
+# Generated files
+*.Generated.cs
+
+# Other
+*.tmp
+*.cache
+
+# Ignore published artifacts from CI
+artifacts/
+
+# Keep this file at project root
+
