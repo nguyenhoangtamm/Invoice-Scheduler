@@ -60,7 +60,10 @@ configuration.GetSection(JobConfiguration.SectionName));
     configuration.GetConnectionString("HangfireConnection"),
          hangfireStorageOptions));
 
-      services.AddHangfireServer();
+        services.AddHangfireServer(options =>
+        {
+            options.Queues = new[] { "default", "batch" };
+        });
 
         return services;
     }

@@ -96,7 +96,7 @@ public class CreateBatchJob : ICreateBatchJob
                        !string.IsNullOrEmpty(i.Cid) &&
                        i.BatchId == null)
             .OrderBy(i => i.CreatedAt)
-            .Take(_jobConfig.BatchSize * 3) // Get more than we need to handle concurrent processing
+            .Take(_jobConfig.BatchSize * _jobConfig.BatchesPerRun) 
             .ToListAsync(cancellationToken);
     }
 
@@ -190,30 +190,15 @@ public class CreateBatchJob : ICreateBatchJob
                     throw new InvalidOperationException($"No valid CIDs found for batch {batchId}");
                 }
 
-                var merkleResult = _merkleTreeService.BuildTree(cids);
-
-                // Create batch metadata for IPFS
-                var batchMetadata = new
+                // Create batch CIDs JSON and upload to IPFS
+                var batchCids = new
                 {
-                    BatchId = batchId,
-                    Count = claimedInvoices.Count,
-                    MerkleRoot = merkleResult.Root,
-                    TreeDepth = merkleResult.TreeDepth,
-                    Invoices = claimedInvoices.Select(i => new
-                    {
-                        InvoiceId = i.Id,
-                        InvoiceNumber = i.InvoiceNumber,
-                        Cid = i.Cid,
-                        CidHash = i.CidHash,
-                        MerkleProof = merkleResult.Proofs.ContainsKey(i.Cid!) ? merkleResult.Proofs[i.Cid!] : new List<string>()
-                    }).ToList(),
-                    CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-                    Version = "1.0"
+                    Cids = cids
                 };
+                var batchFileName = $"batch-cids-{batchId}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json";
+                var batchCid = await _ipfsService.PinJsonAsync(batchCids, batchFileName, cancellationToken);
 
-                // Upload batch metadata to IPFS
-                var batchFileName = $"batch-{batchId}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json";
-                var batchCid = await _ipfsService.PinJsonAsync(batchMetadata, batchFileName, cancellationToken);
+                var merkleResult = _merkleTreeService.BuildTree(cids);
 
                 // Update batch and invoices with Merkle data
                 using var updateTransaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);

@@ -25,10 +25,6 @@ public class InvoiceBatch
     [MaxLength(255)]
     public string? BatchCid { get; set; }
 
-    [Column("externalBatchId")]
-    [MaxLength(100)]
-    public string? ExternalBatchId { get; set; }
-
     [Column("status")]
     [MaxLength(50)]
     public string Status { get; set; } = "processing";

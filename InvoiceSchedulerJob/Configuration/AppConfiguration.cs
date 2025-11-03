@@ -71,9 +71,10 @@ public class JobConfiguration
 {
     public const string SectionName = "Jobs";
 
-    public int BatchSize { get; set; } = 100;
+    public int BatchSize { get; set; } = 4;
+    public int BatchesPerRun { get; set; } = 3;
     public string UploadCron { get; set; } = "*/10 * * * * *"; // Every 10 sec
-    public string BatchCron { get; set; } = "*/15 * * * *"; // Every 15 minutes
+    public string BatchCron { get; set; } = "*/15 * * * * *"; // Every 15 sec
     public string BlockchainCron { get; set; } = "*/10 * * * *"; // Every 10 minutes
     public int ConcurrentUploads { get; set; } = 5;
     public int ProcessingTimeoutMinutes { get; set; } = 60;

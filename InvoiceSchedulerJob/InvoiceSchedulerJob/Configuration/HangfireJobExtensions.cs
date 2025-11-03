@@ -1,4 +1,4 @@
-using Hangfire;
+﻿using Hangfire;
 using InvoiceSchedulerJob.Configuration;
 using InvoiceSchedulerJob.Services.Interfaces;
 
@@ -19,31 +19,31 @@ public static class HangfireJobExtensions
 
             Console.WriteLine($"Configuring IPFS job with cron: {jobConfig.UploadCron}");
 
-            // Upload to IPFS job
-            recurringJobManager.AddOrUpdate<IUploadToIpfsJob>(
-                "upload-to-ipfs",
-                x => x.ExecuteAsync(CancellationToken.None),
-                jobConfig.UploadCron,
-                new RecurringJobOptions
-                {
-                    TimeZone = TimeZoneInfo.Local
-                });
-
-            Console.WriteLine("IPFS recurring job configured successfully");
-
-            // Trigger job ngay l?p t?c ?? test (optional)
-            // BackgroundJob.Enqueue<IUploadToIpfsJob>(x => x.ExecuteAsync(CancellationToken.None));
-
-            //// Create batch job
-            //recurringJobManager.AddOrUpdate<ICreateBatchJob>(
-            //    "create-batch",
-            //    "batch",
+            //// Upload to IPFS job
+            //recurringJobManager.AddOrUpdate<IUploadToIpfsJob>(
+            //    "upload-to-ipfs",
             //    x => x.ExecuteAsync(CancellationToken.None),
-            //    jobConfig.BatchCron,
+            //    jobConfig.UploadCron,
             //    new RecurringJobOptions
             //    {
             //        TimeZone = TimeZoneInfo.Local
             //    });
+
+            //Console.WriteLine("IPFS recurring job configured successfully");
+
+            //// Trigger job ngay lập tức test (optional)
+            //BackgroundJob.Enqueue<IUploadToIpfsJob>(x => x.ExecuteAsync(CancellationToken.None));
+
+            // Create batch job
+            recurringJobManager.AddOrUpdate<ICreateBatchJob>(
+                "create-batch",
+                "batch",
+                x => x.ExecuteAsync(CancellationToken.None),
+                jobConfig.BatchCron,
+                new RecurringJobOptions
+                {
+                    TimeZone = TimeZoneInfo.Local
+                });
 
             //// Submit to blockchain job
             //recurringJobManager.AddOrUpdate<ISubmitToBlockchainJob>(

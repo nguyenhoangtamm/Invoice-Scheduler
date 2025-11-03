@@ -50,9 +50,6 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// CHỜ MỘT CHÚT để đảm bảo Hangfire Server đã khởi động
-await Task.Delay(2000);
-
 // Configure recurring jobs
 await app.Services.ConfigureRecurringJobsAsync();
 
