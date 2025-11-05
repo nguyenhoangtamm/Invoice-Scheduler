@@ -1,15 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace InvoiceSchedulerJob.Models;
+namespace InvoiceSchedulerJob.Entites;
 
 [Table("invoices")]
-public class Invoice
+public class Invoice : BaseEntity
 {
-    [Key]
-    [Column("id")]
-    public int Id { get; set; }
-
     [Column("invoiceNumber")]
     [MaxLength(100)]
     public string InvoiceNumber { get; set; } = string.Empty;
@@ -113,18 +109,6 @@ public class Invoice
 
     [Column("merkleProof")]
     public string? MerkleProof { get; set; }
-
-    [Column("createdAt")]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    [Column("updatedAt")]
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-    [Column("createdBy")]
-    public int? CreatedBy { get; set; }
-
-    [Column("updatedBy")]
-    public int? UpdatedBy { get; set; }
 
     // Navigation properties
     [ForeignKey("BatchId")]

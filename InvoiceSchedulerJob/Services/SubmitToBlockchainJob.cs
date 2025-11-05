@@ -1,6 +1,6 @@
 using InvoiceSchedulerJob.Configuration;
 using InvoiceSchedulerJob.Data;
-using InvoiceSchedulerJob.Models;
+using InvoiceSchedulerJob.Entites;
 using InvoiceSchedulerJob.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -311,7 +311,7 @@ public class SubmitToBlockchainJob : ISubmitToBlockchainJob
             else
             {
                 // Still pending, check if it's been too long
-                var timeSinceUpdate = DateTime.UtcNow - batch.UpdatedAt;
+                var timeSinceUpdate = DateTime.UtcNow - (batch.UpdatedAt ?? batch.CreatedAt);
                 if (timeSinceUpdate.TotalMinutes > _blockchainConfig.TimeoutMs / 60000.0)
                 {
                     _logger.LogWarning(

@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using InvoiceSchedulerJob.Models;
+using InvoiceSchedulerJob.Entites;
 
 namespace InvoiceSchedulerJob.Data;
 

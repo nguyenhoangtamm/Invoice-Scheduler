@@ -1,7 +1,7 @@
 using System.Text.Json;
 using InvoiceSchedulerJob.Configuration;
 using InvoiceSchedulerJob.Data;
-using InvoiceSchedulerJob.Models;
+using InvoiceSchedulerJob.Entites;
 using InvoiceSchedulerJob.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

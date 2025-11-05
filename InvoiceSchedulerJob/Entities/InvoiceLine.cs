@@ -1,14 +1,14 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace InvoiceSchedulerJob.Models;
+namespace InvoiceSchedulerJob.Entites;
 
 [Table("invoiceLines")]
-public class InvoiceLine
+public class InvoiceLine : BaseEntity
 {
-    [Key]
-    [Column("id")]
-    public int Id { get; set; }
+    //[Key]
+    //[Column("id")]
+    //public int Id { get; set; }
 
     [Column("invoiceId")]
     public int InvoiceId { get; set; }
@@ -41,12 +41,6 @@ public class InvoiceLine
 
     [Column("lineTotal", TypeName = "decimal(18,2)")]
     public decimal LineTotal { get; set; }
-
-    [Column("createdAt")]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-    [Column("updatedAt")]
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties
     [ForeignKey("InvoiceId")]
