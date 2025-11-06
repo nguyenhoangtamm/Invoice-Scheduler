@@ -134,12 +134,12 @@ public class CreateBatchJob : ICreateBatchJob
 
             try
             {
-                // Create batch record
+                // Create batch record with Initial status
                 var batch = new InvoiceBatch
                 {
                     BatchId = batchId,
                     Count = invoices.Count,
-                    Status = BatchStatus.Processing,
+                    Status = BatchStatus.Initial,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -211,10 +211,10 @@ public class CreateBatchJob : ICreateBatchJob
 
                 batchToUpdate.MerkleRoot = merkleResult.Root;
                 batchToUpdate.BatchCid = batchCid;
-                batchToUpdate.Status = BatchStatus.ReadyToSend;
+                // Keep batch in Initial status - it will move to BlockchainConfirmed after blockchain submission
                 batchToUpdate.UpdatedAt = DateTime.UtcNow;
 
-                // Update invoices with Merkle proofs and set status to ready for blockchain
+                // Update invoices with Merkle proofs
                 foreach (var invoice in claimedInvoices)
                 {
                     if (!string.IsNullOrEmpty(invoice.Cid) && merkleResult.Proofs.ContainsKey(invoice.Cid))
@@ -223,7 +223,7 @@ public class CreateBatchJob : ICreateBatchJob
                         if (invoiceToUpdate != null)
                         {
                             invoiceToUpdate.MerkleProof = JsonSerializer.Serialize(merkleResult.Proofs[invoice.Cid]);
-                            invoiceToUpdate.Status = InvoiceStatus.BlockchainPending;
+                            // Keep invoice in Batched status - will move to BlockchainConfirmed after blockchain submission
                             invoiceToUpdate.UpdatedAt = DateTime.UtcNow;
                         }
                     }

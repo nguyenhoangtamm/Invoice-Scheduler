@@ -122,11 +122,9 @@ public static class InvoiceStatus
 {
     public const int Uploaded = 1;           // Đã upload
     public const int IpfsStored = 2;         // Đã lưu trên IPFS
-    public const int IpfsFailed = 3;         // Upload IPFS thất bại
-    public const int Batched = 4;            // Đã tạo batch
-    public const int BlockchainPending = 5;  // Chờ xác nhận blockchain
-    public const int BlockchainConfirmed = 6; // Đã xác nhận trên blockchain
-    public const int BlockchainFailed = 7;   // Ghi blockchain thất bại
-    public const int Finalized = 8;          // Hoàn tất
-    public const int Archived = 9;           // Đã lưu trữ
+    public const int Batched = 3;            // Đã tạo batch
+    public const int BlockchainConfirmed = 4; // Đã xác nhận trên blockchain
+    public const int Finalized = 5;          // Hoàn tất
+    public const int IpfsFailed = 101;         // Upload IPFS thất bại
+    public const int BlockchainFailed = 102;   // Ghi blockchain thất bại
 }

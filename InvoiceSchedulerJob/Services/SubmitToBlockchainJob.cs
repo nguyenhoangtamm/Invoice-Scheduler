@@ -98,7 +98,8 @@ public class SubmitToBlockchainJob : ISubmitToBlockchainJob
     private async Task<List<InvoiceBatch>> GetReadyBatchesAsync(CancellationToken cancellationToken)
     {
         return await _dbContext.InvoiceBatches
-            .Where(b => b.Status == BatchStatus.ReadyToSend &&
+            .Include(b => b.Invoices)
+            .Where(b => b.Status == BatchStatus.Initial &&
                        !string.IsNullOrEmpty(b.MerkleRoot))
             .OrderBy(b => b.CreatedAt)
             .Take(10) // Limit to prevent overwhelming the blockchain
@@ -134,29 +135,47 @@ public class SubmitToBlockchainJob : ISubmitToBlockchainJob
                 // Re-fetch and lock the batch
                 var lockedBatch = await _dbContext.InvoiceBatches
                     .Where(b => b.Id == batch.Id &&
-                               b.Status == BatchStatus.ReadyToSend &&
+                               b.Status == BatchStatus.Initial &&
                                string.IsNullOrEmpty(b.TxHash))
                     .FirstOrDefaultAsync(cancellationToken);
 
                 if (lockedBatch == null)
                 {
                     // Batch was already processed by another worker
-                    await transaction.RollbackAsync(cancellationToken);
+                    try
+                    {
+                        await transaction.RollbackAsync(cancellationToken);
+                    }
+                    catch (Exception rollbackEx)
+                    {
+                        _logger.LogWarning(rollbackEx, "Failed to rollback transaction for batch {BatchId}", batch.BatchId);
+                    }
                     _logger.LogDebug("Batch {BatchId} already processed by another worker", batch.BatchId);
                     return true;
                 }
 
-                // Mark as pending
-                lockedBatch.Status = BatchStatus.BlockchainPending;
+                // Mark TxHash placeholder to prevent re-submission
+                // We don't change status here since we still need to track it as Initial until confirmed
                 lockedBatch.UpdatedAt = DateTime.UtcNow;
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
 
-                // Submit to blockchain (outside transaction to avoid long-running transaction)
+                // Calculate batch size (number of invoices in this batch)
+                var batchSize = lockedBatch.Invoices?.Count ?? 0;
+                if (batchSize == 0)
+                {
+                    // Fallback to database count if navigation property is null
+                    batchSize = await _dbContext.Invoices
+                        .Where(i => i.BatchId == lockedBatch.Id)
+                        .CountAsync(cancellationToken);
+                }
+
+                // Submit to blockchain using anchorBatch function (Invoice4.sol)
+                // The metadataURI should point to IPFS URI containing batch metadata
                 var txHash = await _blockchainService.SubmitBatchAsync(
                     lockedBatch.MerkleRoot!,
-                    lockedBatch.BatchId,
-                    lockedBatch.BatchCid,
+                    batchSize,
+                    lockedBatch.BatchCid, // This is the IPFS metadata URI
                     cancellationToken);
 
                 // Update batch with transaction hash
@@ -181,7 +200,14 @@ public class SubmitToBlockchainJob : ISubmitToBlockchainJob
             }
             catch (Exception)
             {
-                await transaction.RollbackAsync(cancellationToken);
+                try
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                }
+                catch (Exception rollbackEx)
+                {
+                    _logger.LogWarning(rollbackEx, "Failed to rollback transaction for batch {BatchId}", batch.BatchId);
+                }
                 throw;
             }
         }
@@ -225,8 +251,9 @@ public class SubmitToBlockchainJob : ISubmitToBlockchainJob
     {
         _logger.LogDebug("Checking pending blockchain transactions");
 
+        // Check batches in Initial status that already have TxHash (submitted but not yet confirmed)
         var pendingBatches = await _dbContext.InvoiceBatches
-            .Where(b => b.Status == BatchStatus.BlockchainPending &&
+            .Where(b => b.Status == BatchStatus.Initial &&
                        !string.IsNullOrEmpty(b.TxHash))
             .ToListAsync(cancellationToken);
 
@@ -334,6 +361,64 @@ public class SubmitToBlockchainJob : ISubmitToBlockchainJob
         {
             _logger.LogError(ex, "Failed to check transaction status for batch {BatchId}", batch.BatchId);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Register individual invoices on blockchain for better indexing
+    /// This is optional and can be called after batch is anchored
+    /// According to Invoice4.sol: registerIndividualInvoice function
+    /// </summary>
+    private async Task RegisterIndividualInvoicesAsync(InvoiceBatch batch, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(batch.MerkleRoot) || batch.Invoices == null || !batch.Invoices.Any())
+        {
+            _logger.LogDebug("Batch {BatchId} has no invoices to register", batch.BatchId);
+            return;
+        }
+
+        _logger.LogInformation(
+            "Registering {InvoiceCount} individual invoices for batch {BatchId}",
+            batch.Invoices.Count, batch.BatchId);
+
+        foreach (var invoice in batch.Invoices)
+        {
+            try
+            {
+                // Use CID or invoice hash based on what's available
+                var invoiceCid = invoice.Cid ?? string.Empty;
+                var invoiceHash = invoice.CidHash ?? "0x0"; // Default hash if not available
+
+                if (string.IsNullOrEmpty(invoiceHash) || invoiceHash == "0x0")
+                {
+                    // Calculate hash from CID if not available
+                    var cidToHash = !string.IsNullOrEmpty(invoiceCid)
+                        ? invoiceCid
+                        : invoice.InvoiceNumber ?? invoice.Id.ToString();
+
+                    var hashBytes = System.Security.Cryptography.SHA256.HashData(
+                        System.Text.Encoding.UTF8.GetBytes(cidToHash));
+                    invoiceHash = "0x" + BitConverter.ToString(hashBytes).Replace("-", "");
+                }
+
+                await _blockchainService.RegisterIndividualInvoiceAsync(
+                    batch.MerkleRoot,
+                    invoice.InvoiceNumber ?? invoice.Id.ToString(),
+                    invoiceCid,
+                    invoiceHash,
+                    cancellationToken);
+
+                _logger.LogDebug(
+                    "Successfully registered invoice {InvoiceId} for batch {BatchId}",
+                    invoice.InvoiceNumber, batch.BatchId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to register invoice {InvoiceId} for batch {BatchId}, will continue with other invoices",
+                    invoice.InvoiceNumber, batch.BatchId);
+                // Don't fail the entire batch if individual invoice registration fails
+            }
         }
     }
 }

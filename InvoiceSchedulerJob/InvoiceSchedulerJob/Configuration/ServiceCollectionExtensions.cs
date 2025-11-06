@@ -22,13 +22,13 @@ public static class ServiceCollectionExtensions
       configuration.GetSection(IpfsConfiguration.SectionName));
         services.Configure<BlockchainConfiguration>(
             configuration.GetSection(BlockchainConfiguration.SectionName));
-   services.Configure<JobConfiguration>(
-configuration.GetSection(JobConfiguration.SectionName));
+        services.Configure<JobConfiguration>(
+     configuration.GetSection(JobConfiguration.SectionName));
         services.Configure<ObservabilityConfiguration>(
       configuration.GetSection(ObservabilityConfiguration.SectionName));
 
         return services;
- }
+    }
 
     /// <summary>
     /// Registers database context
@@ -36,7 +36,7 @@ configuration.GetSection(JobConfiguration.SectionName));
     public static IServiceCollection AddDatabaseContext(
         this IServiceCollection services,
         IConfiguration configuration)
- {
+    {
         services.AddDbContext<InvoiceDbContext>(options =>
   options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
 
@@ -50,8 +50,8 @@ configuration.GetSection(JobConfiguration.SectionName));
         this IServiceCollection services,
       IConfiguration configuration)
     {
-    var hangfireStorageOptions = new PostgreSqlStorageOptions
-  {
+        var hangfireStorageOptions = new PostgreSqlStorageOptions
+        {
             DistributedLockTimeout = TimeSpan.FromMinutes(5)
         };
 
@@ -62,7 +62,7 @@ configuration.GetSection(JobConfiguration.SectionName));
 
         services.AddHangfireServer(options =>
         {
-            options.Queues = new[] { "default", "batch" };
+            options.Queues = new[] { "default", "batch", "blockchain" };
         });
 
         return services;
@@ -75,20 +75,20 @@ configuration.GetSection(JobConfiguration.SectionName));
         this IServiceCollection services,
  IConfiguration configuration)
     {
-// Register IWeb3
+        // Register IWeb3
         services.AddSingleton<IWeb3>(sp =>
         {
- var config = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<BlockchainConfiguration>>().Value;
-  return new Web3(config.RpcUrl);
- });
+            var config = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<BlockchainConfiguration>>().Value;
+            return new Web3(config.RpcUrl);
+        });
 
-  services.AddScoped<IBlockchainService, BlockchainService>();
+        services.AddScoped<IBlockchainService, BlockchainService>();
         services.AddScoped<MerkleTreeService>();
         services.AddSingleton<MetricsService>();
 
         // Legacy services
-  services.AddSingleton<IEthereumJobService, EthereumJobService>();
-      services.AddSingleton<IBlockchainMonitor, BlockchainMonitor>();
+        services.AddSingleton<IEthereumJobService, EthereumJobService>();
+        services.AddSingleton<IBlockchainMonitor, BlockchainMonitor>();
 
         return services;
     }
@@ -99,8 +99,8 @@ configuration.GetSection(JobConfiguration.SectionName));
     public static IServiceCollection AddJobServices(
       this IServiceCollection services)
     {
-  services.AddScoped<IUploadToIpfsJob, UploadToIpfsJob>();
- services.AddScoped<ICreateBatchJob, CreateBatchJob>();
+        services.AddScoped<IUploadToIpfsJob, UploadToIpfsJob>();
+        services.AddScoped<ICreateBatchJob, CreateBatchJob>();
         services.AddScoped<ISubmitToBlockchainJob, SubmitToBlockchainJob>();
 
         return services;
@@ -112,7 +112,7 @@ configuration.GetSection(JobConfiguration.SectionName));
     public static IServiceCollection AddHttpClients(
         this IServiceCollection services)
     {
-     services.AddHttpClient<IIpfsService, IpfsService>();
+        services.AddHttpClient<IIpfsService, IpfsService>();
 
         return services;
     }

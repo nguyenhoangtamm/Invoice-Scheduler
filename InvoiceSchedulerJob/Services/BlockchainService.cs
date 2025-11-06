@@ -18,27 +18,40 @@ public class BlockchainService : IBlockchainService
     private readonly BlockchainConfiguration _config;
     private readonly ILogger<BlockchainService> _logger;
     private readonly IAsyncPolicy _retryPolicy;
-  private Account? _account;
+    private Account? _account;
 
-    // Simple contract ABI for batch submission
+    // Contract ABI for Invoice4.sol - anchorBatch function
     private const string ContractAbi = @"[
         {
             ""inputs"": [
-                {""name"": ""merkleRoot"", ""type"": ""bytes32""},
-                {""name"": ""batchId"", ""type"": ""string""},
-                {""name"": ""metadataCid"", ""type"": ""string""}
+                {""name"": ""_merkleRoot"", ""type"": ""bytes32""},
+                {""name"": ""_batchSize"", ""type"": ""uint256""},
+                {""name"": ""_metadataURI"", ""type"": ""string""}
             ],
-            ""name"": ""submitBatch"",
+            ""name"": ""anchorBatch"",
             ""outputs"": [],
             ""stateMutability"": ""nonpayable"",
             ""type"": ""function""
         },
         {
             ""inputs"": [
-                {""name"": ""cidHash"", ""type"": ""bytes32""},
-                {""name"": ""invoiceId"", ""type"": ""uint256""}
+                {""name"": ""_merkleRoot"", ""type"": ""bytes32""},
+                {""name"": ""_invoiceCID"", ""type"": ""string""},
+                {""name"": ""_proof"", ""type"": ""bytes32[1]""}
             ],
-            ""name"": ""submitInvoice"",
+            ""name"": ""verifyInvoiceByCID"",
+            ""outputs"": [{""name"": """", ""type"": ""bool""}],
+            ""stateMutability"": ""nonpayable"",
+            ""type"": ""function""
+        },
+        {
+            ""inputs"": [
+                {""name"": ""_merkleRoot"", ""type"": ""bytes32""},
+                {""name"": ""_invoiceId"", ""type"": ""string""},
+                {""name"": ""_invoiceCID"", ""type"": ""string""},
+                {""name"": ""_invoiceHash"", ""type"": ""bytes32""}
+            ],
+            ""name"": ""registerIndividualInvoice"",
             ""outputs"": [],
             ""stateMutability"": ""nonpayable"",
             ""type"": ""function""
@@ -50,29 +63,29 @@ public class BlockchainService : IBlockchainService
       IOptions<BlockchainConfiguration> config,
         ILogger<BlockchainService> logger)
     {
-    _web3 = web3;
-    _config = config.Value;
- _logger = logger;
+        _web3 = web3;
+        _config = config.Value;
+        _logger = logger;
         _retryPolicy = CreateRetryPolicy();
 
         // Initialize account if private key is provided
-      if (!string.IsNullOrEmpty(_config.PrivateKey) && string.IsNullOrEmpty(_config.KmsEndpoint))
+        if (!string.IsNullOrEmpty(_config.PrivateKey) && string.IsNullOrEmpty(_config.KmsEndpoint))
         {
             var privateKeyBytes = Convert.FromHexString(_config.PrivateKey.StartsWith("0x") ? _config.PrivateKey[2..] : _config.PrivateKey);
-     var chainId = BigInteger.Parse(_config.ChainId);
-   _account = new Account(privateKeyBytes, chainId);
- _web3 = new Web3(_account, _config.RpcUrl);
+            var chainId = BigInteger.Parse(_config.ChainId);
+            _account = new Account(privateKeyBytes, chainId);
+            _web3 = new Web3(_account, _config.RpcUrl);
             _logger.LogInformation("Initialized blockchain service with local account");
         }
         else if (!string.IsNullOrEmpty(_config.KmsEndpoint))
-{
-    _logger.LogInformation("Initialized blockchain service with KMS endpoint: {KmsEndpoint}", _config.KmsEndpoint);
+        {
+            _logger.LogInformation("Initialized blockchain service with KMS endpoint: {KmsEndpoint}", _config.KmsEndpoint);
             // TODO: Implement KMS signing
-     }
-     else
-    {
-   _logger.LogWarning("No signing method configured (neither private key nor KMS)");
-  }
+        }
+        else
+        {
+            _logger.LogWarning("No signing method configured (neither private key nor KMS)");
+        }
     }
 
     private IAsyncPolicy CreateRetryPolicy()
@@ -91,31 +104,32 @@ public class BlockchainService : IBlockchainService
                 });
     }
 
-    public async Task<string> SubmitBatchAsync(string merkleRoot, string batchId, string? metadataCid, CancellationToken cancellationToken = default)
+    public async Task<string> SubmitBatchAsync(string merkleRoot, int batchSize, string? metadataUri, CancellationToken cancellationToken = default)
     {
         if (_account == null)
         {
             throw new InvalidOperationException("No account configured for signing transactions");
         }
 
-        _logger.LogInformation("Submitting batch to blockchain: {BatchId} with merkle root {MerkleRoot}", batchId, merkleRoot);
+        _logger.LogInformation("Anchoring batch to blockchain: merkle root {MerkleRoot}, batch size {BatchSize}, metadata URI {MetadataUri}",
+            merkleRoot, batchSize, metadataUri);
 
         return await _retryPolicy.ExecuteAsync(async () =>
         {
             var contract = _web3.Eth.GetContract(ContractAbi, _config.ContractAddress);
-            var submitBatchFunction = contract.GetFunction("submitBatch");
+            var anchorBatchFunction = contract.GetFunction("anchorBatch");
 
             // Convert merkle root to bytes32
             var merkleRootBytes = Convert.FromHexString(merkleRoot.StartsWith("0x") ? merkleRoot[2..] : merkleRoot);
 
             // Estimate gas
-            var gasEstimate = await submitBatchFunction.EstimateGasAsync(
+            var gasEstimate = await anchorBatchFunction.EstimateGasAsync(
                 from: _account.Address,
                 gas: null,
                 value: null,
                 merkleRootBytes,
-                batchId,
-                metadataCid ?? string.Empty);
+                new BigInteger(batchSize),
+                metadataUri ?? string.Empty);
 
             // Add 20% buffer to gas estimate
             var gasLimit = new HexBigInteger(gasEstimate.Value * 120 / 100);
@@ -133,44 +147,49 @@ public class BlockchainService : IBlockchainService
             }
 
             // Send transaction
-            var txHash = await submitBatchFunction.SendTransactionAsync(
+            var txHash = await anchorBatchFunction.SendTransactionAsync(
                 from: _account.Address,
                 gas: gasLimit,
                 gasPrice: gasPrice,
                 value: null,
                 merkleRootBytes,
-                batchId,
-                metadataCid ?? string.Empty);
+                new BigInteger(batchSize),
+                metadataUri ?? string.Empty);
 
-            _logger.LogInformation("Batch {BatchId} submitted to blockchain with tx hash: {TxHash}", batchId, txHash);
+            _logger.LogInformation("Batch anchored to blockchain with tx hash: {TxHash}", txHash);
             return txHash;
         });
     }
 
-    public async Task<string> SubmitInvoiceAsync(string cidHash, int invoiceId, CancellationToken cancellationToken = default)
+    public async Task<bool> VerifyInvoiceAsync(string merkleRoot, string invoiceCid, byte[][] merkleProof, CancellationToken cancellationToken = default)
     {
         if (_account == null)
         {
             throw new InvalidOperationException("No account configured for signing transactions");
         }
 
-        _logger.LogInformation("Submitting invoice to blockchain: {InvoiceId} with CID hash {CidHash}", invoiceId, cidHash);
+        _logger.LogInformation("Verifying invoice on blockchain: CID {InvoiceCid}, merkle root {MerkleRoot}",
+            invoiceCid, merkleRoot);
 
         return await _retryPolicy.ExecuteAsync(async () =>
         {
             var contract = _web3.Eth.GetContract(ContractAbi, _config.ContractAddress);
-            var submitInvoiceFunction = contract.GetFunction("submitInvoice");
+            var verifyFunction = contract.GetFunction("verifyInvoiceByCID");
 
-            // Convert CID hash to bytes32
-            var cidHashBytes = Convert.FromHexString(cidHash.StartsWith("0x") ? cidHash[2..] : cidHash);
+            // Convert merkle root to bytes32
+            var merkleRootBytes = Convert.FromHexString(merkleRoot.StartsWith("0x") ? merkleRoot[2..] : merkleRoot);
+
+            // Convert merkle proof array
+            var proofArray = merkleProof.Select(p => new System.Numerics.BigInteger(p)).ToArray();
 
             // Estimate gas
-            var gasEstimate = await submitInvoiceFunction.EstimateGasAsync(
+            var gasEstimate = await verifyFunction.EstimateGasAsync(
                 from: _account.Address,
                 gas: null,
                 value: null,
-                cidHashBytes,
-                new BigInteger(invoiceId));
+                merkleRootBytes,
+                invoiceCid,
+                proofArray);
 
             // Add 20% buffer to gas estimate
             var gasLimit = new HexBigInteger(gasEstimate.Value * 120 / 100);
@@ -185,16 +204,71 @@ public class BlockchainService : IBlockchainService
             }
 
             // Send transaction
-            var txHash = await submitInvoiceFunction.SendTransactionAsync(
+            var result = await verifyFunction.CallAsync<bool>(
+                merkleRootBytes,
+                invoiceCid,
+                proofArray);
+
+            _logger.LogInformation("Invoice {InvoiceCid} verified successfully", invoiceCid);
+            return result;
+        });
+    }
+
+    public async Task RegisterIndividualInvoiceAsync(string merkleRoot, string invoiceId, string invoiceCid, string invoiceHash, CancellationToken cancellationToken = default)
+    {
+        if (_account == null)
+        {
+            throw new InvalidOperationException("No account configured for signing transactions");
+        }
+
+        _logger.LogInformation("Registering individual invoice: ID {InvoiceId}, CID {InvoiceCid}, merkle root {MerkleRoot}",
+            invoiceId, invoiceCid, merkleRoot);
+
+        await _retryPolicy.ExecuteAsync(async () =>
+        {
+            var contract = _web3.Eth.GetContract(ContractAbi, _config.ContractAddress);
+            var registerFunction = contract.GetFunction("registerIndividualInvoice");
+
+            // Convert merkle root to bytes32
+            var merkleRootBytes = Convert.FromHexString(merkleRoot.StartsWith("0x") ? merkleRoot[2..] : merkleRoot);
+
+            // Convert invoice hash to bytes32
+            var invoiceHashBytes = Convert.FromHexString(invoiceHash.StartsWith("0x") ? invoiceHash[2..] : invoiceHash);
+
+            // Estimate gas
+            var gasEstimate = await registerFunction.EstimateGasAsync(
+                from: _account.Address,
+                gas: null,
+                value: null,
+                merkleRootBytes,
+                invoiceId,
+                invoiceCid,
+                invoiceHashBytes);
+
+            // Add 20% buffer to gas estimate
+            var gasLimit = new HexBigInteger(gasEstimate.Value * 120 / 100);
+
+            // Get current gas price
+            var gasPrice = await _web3.Eth.GasPrice.SendRequestAsync();
+            var maxGasPrice = new HexBigInteger(_config.MaxGasPrice);
+
+            if (gasPrice.Value > maxGasPrice.Value)
+            {
+                gasPrice = maxGasPrice;
+            }
+
+            // Send transaction
+            var txHash = await registerFunction.SendTransactionAsync(
                 from: _account.Address,
                 gas: gasLimit,
                 gasPrice: gasPrice,
                 value: null,
-                cidHashBytes,
-                new BigInteger(invoiceId));
+                merkleRootBytes,
+                invoiceId,
+                invoiceCid,
+                invoiceHashBytes);
 
-            _logger.LogInformation("Invoice {InvoiceId} submitted to blockchain with tx hash: {TxHash}", invoiceId, txHash);
-            return txHash;
+            _logger.LogInformation("Individual invoice {InvoiceId} registered with tx hash: {TxHash}", invoiceId, txHash);
         });
     }
 

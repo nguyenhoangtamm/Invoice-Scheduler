@@ -23,7 +23,7 @@ public class InvoiceBatch : BaseEntity
 
     // Status changed to integer codes
     [Column("status")]
-    public int Status { get; set; } = BatchStatus.Processing;
+    public int Status { get; set; } = BatchStatus.Initial;
 
     [Column("txHash")]
     [MaxLength(255)]
@@ -42,10 +42,7 @@ public class InvoiceBatch : BaseEntity
 // Batch status constants (now integers)
 public static class BatchStatus
 {
-    public const int Processing = 1;        // processing
-    public const int ReadyToSend = 2;      // ready_to_send
-    public const int BlockchainPending = 3; // blockchain_pending
-    public const int BlockchainConfirmed = 4; // blockchain_confirmed
-    public const int BlockchainFailed = 5; // blockchain_failed
-    public const int Completed = 6;        // completed
+    public const int Initial = 1; // initial
+    public const int BlockchainConfirmed = 2; // blockchain_confirmed
+    public const int BlockchainFailed = 101; // blockchain_failed
 }

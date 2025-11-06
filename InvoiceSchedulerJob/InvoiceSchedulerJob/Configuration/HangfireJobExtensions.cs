@@ -19,20 +19,17 @@ public static class HangfireJobExtensions
 
             Console.WriteLine($"Configuring IPFS job with cron: {jobConfig.UploadCron}");
 
-            //// Upload to IPFS job
-            //recurringJobManager.AddOrUpdate<IUploadToIpfsJob>(
-            //    "upload-to-ipfs",
-            //    x => x.ExecuteAsync(CancellationToken.None),
-            //    jobConfig.UploadCron,
-            //    new RecurringJobOptions
-            //    {
-            //        TimeZone = TimeZoneInfo.Local
-            //    });
+            // Upload to IPFS job
+            recurringJobManager.AddOrUpdate<IUploadToIpfsJob>(
+                "upload-to-ipfs",
+                x => x.ExecuteAsync(CancellationToken.None),
+                jobConfig.UploadCron,
+                new RecurringJobOptions
+                {
+                    TimeZone = TimeZoneInfo.Local
+                });
 
-            //Console.WriteLine("IPFS recurring job configured successfully");
-
-            //// Trigger job ngay lập tức test (optional)
-            //BackgroundJob.Enqueue<IUploadToIpfsJob>(x => x.ExecuteAsync(CancellationToken.None));
+            Console.WriteLine("IPFS recurring job configured successfully");
 
             // Create batch job
             recurringJobManager.AddOrUpdate<ICreateBatchJob>(
@@ -45,16 +42,16 @@ public static class HangfireJobExtensions
                     TimeZone = TimeZoneInfo.Local
                 });
 
-            //// Submit to blockchain job
-            //recurringJobManager.AddOrUpdate<ISubmitToBlockchainJob>(
-            //    "submit-to-blockchain",
-            //    "blockchain",
-            //    x => x.ExecuteAsync(CancellationToken.None),
-            //    jobConfig.BlockchainCron,
-            //    new RecurringJobOptions
-            //    {
-            //        TimeZone = TimeZoneInfo.Local
-            //    });
+            // Submit to blockchain job
+            recurringJobManager.AddOrUpdate<ISubmitToBlockchainJob>(
+                "submit-to-blockchain",
+                "blockchain",
+                x => x.ExecuteAsync(CancellationToken.None),
+                jobConfig.BlockchainCron,
+                new RecurringJobOptions
+                {
+                    TimeZone = TimeZoneInfo.Local
+                });
 
             // Legacy jobs
             //recurringJobManager.AddOrUpdate<IBlockchainMonitor>(
