@@ -191,9 +191,13 @@ public class CreateBatchJob : ICreateBatchJob
                 }
 
                 // Create batch CIDs JSON and upload to IPFS
+                var batchCidsList = claimedInvoices
+                    .Where(i => !string.IsNullOrEmpty(i.Cid))
+                    .Select(i => new { InvoiceId = i.Id, Cid = i.Cid! })
+                    .ToList();
                 var batchCids = new
                 {
-                    Cids = cids
+                    Cids = batchCidsList
                 };
                 var batchFileName = $"batch-cids-{batchId}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.json";
                 var batchCid = await _ipfsService.PinJsonAsync(batchCids, batchFileName, cancellationToken);

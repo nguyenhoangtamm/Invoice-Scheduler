@@ -9,6 +9,7 @@ using Nethereum.Web3;
 using Nethereum.Web3.Accounts;
 using Polly;
 using Polly.Extensions.Http;
+using InvoiceSchedulerJob.DTOs;
 
 namespace InvoiceSchedulerJob.Services;
 
@@ -20,7 +21,7 @@ public class BlockchainService : IBlockchainService
     private readonly IAsyncPolicy _retryPolicy;
     private Account? _account;
 
-    // Contract ABI for Invoice4.sol - anchorBatch function
+    // Contract ABI for Invoice4.sol - anchorBatch, verifyInvoiceByCID, getBatch functions
     private const string ContractAbi = @"[
         {
             ""inputs"": [
@@ -42,6 +43,21 @@ public class BlockchainService : IBlockchainService
             ""name"": ""verifyInvoiceByCID"",
             ""outputs"": [{""name"": """", ""type"": ""bool""}],
             ""stateMutability"": ""nonpayable"",
+            ""type"": ""function""
+        },
+        {
+            ""inputs"": [
+                {""name"": ""_merkleRoot"", ""type"": ""bytes32""}
+            ],
+            ""name"": ""getBatch"",
+            ""outputs"": [
+                {""name"": ""merkleRoot"", ""type"": ""bytes32""},
+                {""name"": ""batchSize"", ""type"": ""uint256""},
+                {""name"": ""issuer"", ""type"": ""address""},
+                {""name"": ""metadataURI"", ""type"": ""string""},
+                {""name"": ""timestamp"", ""type"": ""uint256""}
+            ],
+            ""stateMutability"": ""view"",
             ""type"": ""function""
         },
         {
@@ -212,6 +228,50 @@ public class BlockchainService : IBlockchainService
             _logger.LogInformation("Invoice {InvoiceCid} verified successfully", invoiceCid);
             return result;
         });
+    }
+
+    public async Task<InvoiceBatchDto?> GetBatchAsync(string merkleRoot, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation("Getting batch info from blockchain: merkle root {MerkleRoot}", merkleRoot);
+
+        try
+        {
+            return await _retryPolicy.ExecuteAsync(async () =>
+            {
+                var contract = _web3.Eth.GetContract(ContractAbi, _config.ContractAddress);
+                var getBatchFunction = contract.GetFunction("getBatch");
+
+                // Convert merkle root to bytes32
+                var merkleRootBytes = Convert.FromHexString(merkleRoot.StartsWith("0x") ? merkleRoot[2..] : merkleRoot);
+
+                // Call the getBatch function
+                var result = await getBatchFunction.CallDeserializingToObjectAsync<dynamic>(
+                    merkleRootBytes);
+
+                if (result == null)
+                {
+                    _logger.LogWarning("Batch not found for merkle root: {MerkleRoot}", merkleRoot);
+                    return null;
+                }
+
+                var batch = new InvoiceBatchDto
+                {
+                    MerkleRoot = merkleRoot,
+                    BatchSize = (int)result.batchSize,
+                    Issuer = (string)result.issuer,
+                    MetadataUri = (string)result.metadataURI,
+                    Timestamp = (long)result.timestamp
+                };
+
+                _logger.LogInformation("Successfully retrieved batch info for merkle root: {MerkleRoot}", merkleRoot);
+                return batch;
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get batch info for merkle root: {MerkleRoot}", merkleRoot);
+            return null;
+        }
     }
 
     public async Task RegisterIndividualInvoiceAsync(string merkleRoot, string invoiceId, string invoiceCid, string invoiceHash, CancellationToken cancellationToken = default)
