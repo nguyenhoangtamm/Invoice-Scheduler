@@ -3,111 +3,111 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InvoiceSchedulerJob.Entites;
 
-[Table("invoices")]
+[Table("Invoices")]
 public class Invoice : BaseEntity
 {
-    [Column("invoiceNumber")]
+    [Column("InvoiceNumber")]
     [MaxLength(100)]
     public string InvoiceNumber { get; set; } = string.Empty;
 
-    [Column("formNumber")]
+    [Column("FormNumber")]
     [MaxLength(50)]
     public string FormNumber { get; set; } = string.Empty;
 
-    [Column("serial")]
+    [Column("Serial")]
     [MaxLength(50)]
     public string Serial { get; set; } = string.Empty;
 
     // Tenant organization (foreign key to organizations.id)
-    [Column("tenantOrganizationId")]
+    [Column("OrganizationId")]
     public int TenantOrganizationId { get; set; }
 
     // Issued by user (foreign key to users.id)
-    [Column("issuedByUserId")]
+    [Column("IssuedByUserId")]
     public int IssuedByUserId { get; set; }
 
-    [Column("sellerName")]
+    [Column("SellerName")]
     [MaxLength(255)]
     public string SellerName { get; set; } = string.Empty;
 
-    [Column("sellerTaxId")]
+    [Column("SellerTaxId")]
     [MaxLength(50)]
     public string SellerTaxId { get; set; } = string.Empty;
 
-    [Column("sellerAddress")]
+    [Column("SellerAddress")]
     [MaxLength(500)]
     public string SellerAddress { get; set; } = string.Empty;
 
-    [Column("sellerPhone")]
+    [Column("SellerPhone")]
     [MaxLength(20)]
     public string SellerPhone { get; set; } = string.Empty;
 
-    [Column("sellerEmail")]
+    [Column("SellerEmail")]
     [MaxLength(100)]
     public string SellerEmail { get; set; } = string.Empty;
 
-    [Column("customerName")]
+    [Column("CustomerName")]
     [MaxLength(255)]
     public string CustomerName { get; set; } = string.Empty;
 
-    [Column("customerTaxId")]
+    [Column("CustomerTaxId")]
     [MaxLength(50)]
     public string CustomerTaxId { get; set; } = string.Empty;
 
-    [Column("customerAddress")]
+    [Column("CustomerAddress")]
     [MaxLength(500)]
     public string CustomerAddress { get; set; } = string.Empty;
 
-    [Column("customerPhone")]
+    [Column("CustomerPhone")]
     [MaxLength(20)]
     public string CustomerPhone { get; set; } = string.Empty;
 
-    [Column("customerEmail")]
+    [Column("CustomerEmail")]
     [MaxLength(100)]
     public string CustomerEmail { get; set; } = string.Empty;
 
-    [Column("status")]
+    [Column("Status")]
     public int Status { get; set; }
 
-    // Issued date (column name in DB is issuedDate)
-    [Column("issuedDate")]
+    // Issued date (column name in DB is IssuedDate)
+    [Column("IssuedDate")]
     public DateTime IssueDate { get; set; }
 
-    [Column("subTotal", TypeName = "decimal(18,2)")]
+    [Column("SubTotal", TypeName = "decimal(18,2)")]
     public decimal SubTotal { get; set; }
 
-    [Column("taxAmount", TypeName = "decimal(18,2)")]
+    [Column("TaxAmount", TypeName = "decimal(18,2)")]
     public decimal TaxAmount { get; set; }
 
-    [Column("discountAmount", TypeName = "decimal(18,2)")]
+    [Column("DiscountAmount", TypeName = "decimal(18,2)")]
     public decimal DiscountAmount { get; set; }
 
-    [Column("totalAmount", TypeName = "decimal(18,2)")]
+    [Column("TotalAmount", TypeName = "decimal(18,2)")]
     public decimal TotalAmount { get; set; }
 
-    [Column("currency")]
+    [Column("Currency")]
     [MaxLength(3)]
     public string Currency { get; set; } = "VND";
 
-    [Column("note")]
+    [Column("Note")]
     public string? Note { get; set; }
 
-    [Column("batchId")]
+    [Column("BatchId")]
     public int? BatchId { get; set; }
 
-    [Column("immutableHash")]
+    [Column("ImmutableHash")]
     [MaxLength(255)]
     public string? ImmutableHash { get; set; }
 
-    [Column("cid")]
+    [Column("Cid")]
     [MaxLength(255)]
     public string? Cid { get; set; }
 
-    [Column("cidHash")]
+    [Column("CidHash")]
     [MaxLength(255)]
     public string? CidHash { get; set; }
 
-    [Column("merkleProof")]
+    [Column("MerkleProof")]
     public string? MerkleProof { get; set; }
 
     // Navigation properties

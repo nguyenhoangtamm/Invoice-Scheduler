@@ -3,36 +3,36 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InvoiceSchedulerJob.Entites;
 
-[Table("invoiceBatches")]
+[Table("InvoiceBatches")]
 public class InvoiceBatch : BaseEntity
 {
-    [Column("batchId")]
+    [Column("BatchId")]
     [MaxLength(100)]
     public string BatchId { get; set; } = string.Empty;
 
-    [Column("count")]
+    [Column("Count")]
     public int Count { get; set; }
 
-    [Column("merkleRoot")]
+    [Column("MerkleRoot")]
     [MaxLength(255)]
     public string? MerkleRoot { get; set; }
 
-    [Column("batchCid")]
+    [Column("BatchCid")]
     [MaxLength(255)]
     public string? BatchCid { get; set; }
 
     // Status changed to integer codes
-    [Column("status")]
+    [Column("Status")]
     public int Status { get; set; } = BatchStatus.Initial;
 
-    [Column("txHash")]
+    [Column("TxHash")]
     [MaxLength(255)]
     public string? TxHash { get; set; }
 
-    [Column("blockNumber")]
+    [Column("BlockNumber")]
     public long? BlockNumber { get; set; }
 
-    [Column("confirmedAt")]
+    [Column("ConfirmedAt")]
     public DateTime? ConfirmedAt { get; set; }
 
     // Navigation properties

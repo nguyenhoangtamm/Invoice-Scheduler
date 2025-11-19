@@ -3,43 +3,43 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InvoiceSchedulerJob.Entites;
 
-[Table("invoiceLines")]
+[Table("InvoiceLines")]
 public class InvoiceLine : BaseEntity
 {
     //[Key]
     //[Column("id")]
     //public int Id { get; set; }
 
-    [Column("invoiceId")]
+    [Column("InvoiceId")]
     public int InvoiceId { get; set; }
 
-    [Column("lineNumber")]
+    [Column("LineNumber")]
     public int LineNumber { get; set; }
 
-    [Column("description")]
+    [Column("Description")]
     [MaxLength(500)]
     public string Description { get; set; } = string.Empty;
 
-    [Column("unit")]
+    [Column("Unit")]
     [MaxLength(50)]
     public string Unit { get; set; } = string.Empty;
 
-    [Column("quantity", TypeName = "decimal(18,4)")]
+    [Column("Quantity", TypeName = "decimal(18,4)")]
     public decimal Quantity { get; set; }
 
-    [Column("unitPrice", TypeName = "decimal(18,2)")]
+    [Column("UnitPrice", TypeName = "decimal(18,2)")]
     public decimal UnitPrice { get; set; }
 
-    [Column("discount", TypeName = "decimal(18,2)")]
+    [Column("Discount", TypeName = "decimal(18,2)")]
     public decimal Discount { get; set; }
 
-    [Column("taxRate", TypeName = "decimal(5,2)")]
+    [Column("TaxRate", TypeName = "decimal(5,2)")]
     public decimal TaxRate { get; set; }
 
-    [Column("taxAmount", TypeName = "decimal(18,2)")]
+    [Column("TaxAmount", TypeName = "decimal(18,2)")]
     public decimal TaxAmount { get; set; }
 
-    [Column("lineTotal", TypeName = "decimal(18,2)")]
+    [Column("LineTotal", TypeName = "decimal(18,2)")]
     public decimal LineTotal { get; set; }
 
     // Navigation properties

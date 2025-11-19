@@ -7,22 +7,22 @@ namespace InvoiceSchedulerJob.Entites;
 public abstract class BaseEntity
 {
     [Key]
-    [Column("id")]
+    [Column("Id")]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Required]
     public int Id { get; set; }
 
-    [Column("createdBy")]
+    [Column("CreatedBy")]
     public int? CreatedBy { get; set; }
 
-    [Column("createdAt")]
+    [Column("CreatedDate")]
     [Required]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    [Column("updatedBy")]
+    [Column("UpdatedBy")]
     public int? UpdatedBy { get; set; }
 
-    [Column("updatedAt")]
+    [Column("UpdatedDate")]
     public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
 
     //[Column("rowVersion")]
