@@ -10,6 +10,10 @@ public class Invoice : BaseEntity
     [MaxLength(100)]
     public string InvoiceNumber { get; set; } = string.Empty;
 
+    [Column("LookupCode")]
+    [MaxLength(100)]
+    public string LookupCode { get; set; } = string.Empty;
+
     [Column("FormNumber")]
     [MaxLength(50)]
     public string FormNumber { get; set; } = string.Empty;
@@ -20,7 +24,7 @@ public class Invoice : BaseEntity
 
     // Tenant organization (foreign key to organizations.id)
     [Column("OrganizationId")]
-    public int TenantOrganizationId { get; set; }
+    public int OrganizationId { get; set; }
 
     // Issued by user (foreign key to users.id)
     [Column("IssuedByUserId")]

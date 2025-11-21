@@ -239,8 +239,9 @@ public class UploadToIpfsJob : IUploadToIpfsJob
             invoice.InvoiceNumber,
             invoice.FormNumber,
             invoice.Serial,
-            invoice.TenantOrganizationId,
+            invoice.OrganizationId,
             invoice.IssuedByUserId,
+            invoice.LookupCode,
             SellerInfo = new
             {
                 invoice.SellerName,
