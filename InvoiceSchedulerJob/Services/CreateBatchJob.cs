@@ -96,7 +96,7 @@ public class CreateBatchJob : ICreateBatchJob
                        !string.IsNullOrEmpty(i.Cid) &&
                        i.BatchId == null)
             .OrderBy(i => i.CreatedAt)
-            .Take(_jobConfig.BatchSize * _jobConfig.BatchesPerRun) 
+            .Take(_jobConfig.BatchSize * _jobConfig.BatchesPerRun)
             .ToListAsync(cancellationToken);
     }
 
@@ -141,7 +141,7 @@ public class CreateBatchJob : ICreateBatchJob
                     Count = invoices.Count,
                     Status = BatchStatus.Initial,
                     CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = DateTime.UtcNow,
                 };
 
                 _dbContext.InvoiceBatches.Add(batch);

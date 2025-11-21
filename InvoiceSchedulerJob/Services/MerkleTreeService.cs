@@ -1,3 +1,4 @@
+﻿using Nethereum.Util;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -24,7 +25,7 @@ public class MerkleTreeService
 
         // Sort leaves for deterministic tree construction
         var sortedLeaves = leafList.OrderBy(x => x).ToList();
-        var leafHashes = sortedLeaves.Select(ComputeHash).ToList();
+        var leafHashes = sortedLeaves.Select(leaf => ComputeKeccakHash(leaf)).ToList();
 
         var proofs = new Dictionary<string, List<string>>();
         var tree = new List<List<string>> { leafHashes };
@@ -40,7 +41,24 @@ public class MerkleTreeService
                 string left = currentLevel[i];
                 string right = i + 1 < currentLevel.Count ? currentLevel[i + 1] : left;
 
-                string combinedHash = ComputeHash(left + right);
+                byte[] leftBytes = HexToBytes(left);
+                byte[] rightBytes = HexToBytes(right);
+
+                // Sắp xếp 2 node theo byte-wise để khớp với OpenZeppelin MerkleProof.processProof
+                byte[] first, second;
+                if (CompareBytes(leftBytes, rightBytes) <= 0)
+                {
+                    first = leftBytes;
+                    second = rightBytes;
+                }
+                else
+                {
+                    first = rightBytes;
+                    second = leftBytes;
+                }
+
+                byte[] combinedBytes = first.Concat(second).ToArray();
+                string combinedHash = ComputeHashFromBytes(combinedBytes);
                 nextLevel.Add(combinedHash);
             }
 
@@ -70,7 +88,31 @@ public class MerkleTreeService
             TreeDepth = tree.Count - 1
         };
     }
+    private int CompareBytes(byte[] a, byte[] b)
+    {
+        int len = Math.Min(a.Length, b.Length);
+        for (int i = 0; i < len; i++)
+        {
+            if (a[i] < b[i]) return -1;
+            if (a[i] > b[i]) return 1;
+        }
+        if (a.Length < b.Length) return -1;
+        if (a.Length > b.Length) return 1;
+        return 0;
+    }
 
+    private static byte[] HexToBytes(string hex)
+    {
+        if (hex.StartsWith("0x")) hex = hex.Substring(2);
+        return Convert.FromHexString(hex);
+    }
+
+    private static string ComputeHashFromBytes(byte[] bytes)
+    {
+        var keccak = new Sha3Keccack();
+        var hashBytes = keccak.CalculateHash(bytes);
+        return "0x" + Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
     private List<string> GenerateProof(List<List<string>> tree, int leafIndex)
     {
         var proof = new List<string>();
@@ -110,22 +152,31 @@ public class MerkleTreeService
     {
         try
         {
-            string currentHash = ComputeHash(leaf);
+            byte[] currentHash = HexToBytes(ComputeHash(leaf));
 
             foreach (string proofElement in proof)
             {
-                // Determine order by comparing hashes lexicographically
-                if (string.Compare(currentHash, proofElement, StringComparison.Ordinal) < 0)
+                byte[] proofBytes = HexToBytes(proofElement);
+
+                // Determine order by comparing bytes (byte-wise) to match OpenZeppelin MerkleProof
+                byte[] first, second;
+                if (CompareBytes(currentHash, proofBytes) <= 0)
                 {
-                    currentHash = ComputeHash(currentHash + proofElement);
+                    first = currentHash;
+                    second = proofBytes;
                 }
                 else
                 {
-                    currentHash = ComputeHash(proofElement + currentHash);
+                    first = proofBytes;
+                    second = currentHash;
                 }
+
+                byte[] combinedBytes = first.Concat(second).ToArray();
+                currentHash = HexToBytes(ComputeHashFromBytes(combinedBytes));
             }
 
-            bool isValid = currentHash.Equals(merkleRoot, StringComparison.OrdinalIgnoreCase);
+            string computedRoot = "0x" + Convert.ToHexString(currentHash).ToLowerInvariant();
+            bool isValid = computedRoot.Equals(merkleRoot, StringComparison.OrdinalIgnoreCase);
 
             _logger.LogDebug(
                 "Merkle proof verification for leaf {Leaf}: {Result}",
@@ -140,11 +191,17 @@ public class MerkleTreeService
         }
     }
 
+    private static string ComputeKeccakHash(string input)
+    {
+        var keccak = new Sha3Keccack();
+        var hashBytes = keccak.CalculateHash(Encoding.UTF8.GetBytes(input));
+        return "0x" + Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
+
     private static string ComputeHash(string input)
     {
-        using var sha256 = SHA256.Create();
-        var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
-        return Convert.ToHexString(hashBytes).ToLowerInvariant();
+        // Use Keccak-256 for consistency with tree construction and blockchain verification
+        return ComputeKeccakHash(input);
     }
 }
 

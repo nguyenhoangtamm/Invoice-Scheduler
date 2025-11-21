@@ -16,9 +16,9 @@ public class InvoiceLine : BaseEntity
     [Column("LineNumber")]
     public int LineNumber { get; set; }
 
-    [Column("Description")]
+    [Column("Name")]
     [MaxLength(500)]
-    public string Description { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
     [Column("Unit")]
     [MaxLength(50)]

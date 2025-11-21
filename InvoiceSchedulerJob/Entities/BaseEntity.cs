@@ -25,6 +25,10 @@ public abstract class BaseEntity
     [Column("UpdatedDate")]
     public DateTime? UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    [Column("IsDeleted")]
+    [Required]
+    public bool IsDeleted { get; set; } = false;
+
     //[Column("rowVersion")]
     //[Timestamp]
     //[ConcurrencyCheck]

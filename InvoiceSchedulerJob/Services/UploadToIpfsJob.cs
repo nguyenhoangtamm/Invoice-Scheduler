@@ -270,7 +270,7 @@ public class UploadToIpfsJob : IUploadToIpfsJob
             Lines = invoice.Lines.Select(line => new
             {
                 line.LineNumber,
-                line.Description,
+                line.Name,
                 line.Unit,
                 line.Quantity,
                 line.UnitPrice,
