@@ -1,29 +1,11 @@
 version: "3.8"
 
 services:
-    postgres:
-        image: postgres:15
-        container_name: invoice-postgres
-        environment:
-            POSTGRES_DB: postgres
-            POSTGRES_USER: postgres
-            POSTGRES_PASSWORD: yourpassword
-        ports:
-            - "5432:5432"
-        volumes:
-            - postgres_data:/var/lib/postgresql/data
-            - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U postgres"]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-
     redis:
         image: redis:7-alpine
         container_name: invoice-redis
         ports:
-            - "6379:6379"
+            - "${REDIS_PORT:-6379}:6379"
         volumes:
             - redis_data:/data
         healthcheck:
@@ -45,14 +27,13 @@ services:
             - Ipfs__ApiSecret=${IPFS_API_SECRET}
             - Ipfs__BaseUrl=${IPFS_BASE_URL:-https://api.pinata.cloud}
             - Ipfs__GatewayUrl=${IPFS_GATEWAY_URL:-https://gateway.pinata.cloud}
+            - Ipfs__JwtToken=${IPFS_JWT_TOKEN}
             - Blockchain__RpcUrl=${BLOCKCHAIN_RPC_URL:-https://rpc.ankr.com/eth_sepolia}
             - Blockchain__ChainId=${BLOCKCHAIN_CHAIN_ID:-11155111}
             - Blockchain__PrivateKey=${BLOCKCHAIN_PRIVATE_KEY}
             - Blockchain__ContractAddress=${BLOCKCHAIN_CONTRACT_ADDRESS}
             - Hangfire__ConnectionString=${HANGFIRE_CONNECTION_STRING:-Host=postgres;Port=5432;Database=hangfire_jobs;Username=postgres;Password=yourpassword}
         depends_on:
-            postgres:
-                condition: service_healthy
             redis:
                 condition: service_healthy
         restart: unless-stopped
@@ -60,5 +41,4 @@ services:
             - ./logs:/app/logs
 
 volumes:
-    postgres_data:
     redis_data:
