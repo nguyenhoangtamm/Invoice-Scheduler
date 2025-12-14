@@ -41,8 +41,10 @@ services:
             - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
             - ConnectionStrings__DefaultConnection=Host=${DB_HOST:-postgres};Port=${DB_PORT:-5432};Database=${DB_NAME:-invoice_system};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-yourpassword}
             - ConnectionStrings__HangfireConnection=Host=${DB_HOST:-postgres};Port=${DB_PORT:-5432};Database=hangfire_jobs;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-yourpassword}
-            - Ipfs__ApiUrl=${IPFS_API_URL:-http://localhost:5001}
-            - Ipfs__GatewayUrl=${IPFS_GATEWAY_URL:-http://localhost:8080}
+            - Ipfs__ApiKey=${IPFS_API_KEY}
+            - Ipfs__ApiSecret=${IPFS_API_SECRET}
+            - Ipfs__BaseUrl=${IPFS_BASE_URL:-https://api.pinata.cloud}
+            - Ipfs__GatewayUrl=${IPFS_GATEWAY_URL:-https://gateway.pinata.cloud}
             - Blockchain__RpcUrl=${BLOCKCHAIN_RPC_URL:-https://rpc.ankr.com/eth_sepolia}
             - Blockchain__ChainId=${BLOCKCHAIN_CHAIN_ID:-11155111}
             - Blockchain__PrivateKey=${BLOCKCHAIN_PRIVATE_KEY}
