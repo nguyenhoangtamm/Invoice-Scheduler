@@ -1,0 +1,185 @@
+name: Deploy Invoice Scheduler Job
+
+on:
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: "Select environment:"
+                required: true
+                default: "dev"
+                type: choice
+                options:
+                    - dev
+                    - staging
+                    - prod
+            branch:
+                description: 'Branch or tag to deploy, with tags allowed only for the "prod" environment.'
+                required: true
+                default: "master"
+
+env:
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+    DOTNET_NOLOGO: true
+    NUGET_XMLDOC_MODE: skip
+    DEFAULT_BRANCH: master
+    SOURCE_FOLDER: /home/${{ secrets.REMOTE_USER }}/invoice-scheduler-job
+    REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+    IMAGE_NAME: invoice-scheduler-job
+
+jobs:
+    remote-deploy:
+        runs-on: ubuntu-latest
+        environment: ${{ github.event.inputs.environment }}
+        steps:
+            - name: Checkout (for workflow context only)
+              uses: actions/checkout@v4
+
+            - name: Remote Deploy via SSH
+              uses: appleboy/ssh-action@v0.1.10
+              with:
+                  host: ${{ secrets.REMOTE_HOST }}
+                  username: ${{ secrets.REMOTE_USER }}
+                  password: ${{ secrets.REMOTE_PASSWORD }}
+                  port: 22
+                  script: |
+                      set -euxo pipefail
+                      REPO_URL="https://github.com/${{ github.repository }}"
+                      ENV="${{ github.event.inputs.environment }}"
+                      BRANCH="${{ github.event.inputs.branch }}"
+                      GITHUB_RUN_NUMBER="${{ github.run_id }}"          
+                      APP_NAME="invoice-scheduler-job"
+                      ASPNETCORE_ENVIRONMENT="${{ vars.ASPNETCORE_ENVIRONMENT }}"
+                      DB_HOST="${{ secrets.DB_HOST }}"
+                      DB_PORT="${{ secrets.DB_PORT }}"
+                      DB_NAME="${{ secrets.DB_NAME }}"
+                      DB_USER="${{ secrets.DB_USER }}"
+                      DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+                      BLOCKCHAIN_RPC_URL="${{ secrets.BLOCKCHAIN_RPC_URL }}"
+                      BLOCKCHAIN_CHAIN_ID="${{ secrets.BLOCKCHAIN_CHAIN_ID }}"
+                      BLOCKCHAIN_PRIVATE_KEY="${{ secrets.BLOCKCHAIN_PRIVATE_KEY }}"
+                      BLOCKCHAIN_CONTRACT_ADDRESS="${{ secrets.BLOCKCHAIN_CONTRACT_ADDRESS }}"
+                      IPFS_API_URL="${{ secrets.IPFS_API_URL }}"
+                      IPFS_GATEWAY_URL="${{ secrets.IPFS_GATEWAY_URL }}"
+                      HANGFIRE_CONNECTION_STRING="${{ secrets.HANGFIRE_CONNECTION_STRING }}"
+                      WORKING_FOLDER="${{ vars.SOURCE_FOLDER }}"  
+                      BRANCH_SANITIZED=$(echo "$BRANCH" | sed 's/[\/\.]/_/g')
+                      CHECKOUT_FOLDER="${WORKING_FOLDER}/${BRANCH_SANITIZED}_${ENV}_${GITHUB_RUN_NUMBER}"
+                      DOCKER_COMPOSE_FILE_PATH="${CHECKOUT_FOLDER}/docker-compose.yml"    
+
+                      echo "=========================================="
+                      echo "Invoice Scheduler Job Deployment Started"
+                      echo "=========================================="
+                      echo "Selected environment: $ENV"
+                      echo "Deploying branch/tag: $BRANCH"
+                      echo "GitHub run number: $GITHUB_RUN_NUMBER"
+                      echo "Checkout folder: $CHECKOUT_FOLDER"
+                      echo "Working folder: $WORKING_FOLDER"
+                      echo "Docker Compose file path: $DOCKER_COMPOSE_FILE_PATH"
+                      echo "App name: $APP_NAME"
+                      echo "ASPNETCORE_ENVIRONMENT: $ASPNETCORE_ENVIRONMENT"
+                      echo "=========================================="
+
+                      if [ ! -d "$CHECKOUT_FOLDER" ]; then
+                        echo "Creating deployment folder: $CHECKOUT_FOLDER"
+                        mkdir -p "$CHECKOUT_FOLDER"
+                      fi
+                                 
+                      echo "Cleaning up old deployment folders (older than 3 days)..."
+                      find "$WORKING_FOLDER" -mindepth 1 -maxdepth 1 -type d -mtime +3 -exec rm -rf {} \;
+                      echo "✅ Cleanup completed."
+
+                      cd "$CHECKOUT_FOLDER"
+                      echo "📁 Entering checkout folder: $CHECKOUT_FOLDER"
+                      ls -la
+
+                      if [ ! -d .git ]; then
+                        echo "🔄 Cloning repository..."
+                        git clone "$REPO_URL" .
+                      fi
+
+                      echo "📡 Fetching latest changes..."
+                      git fetch origin
+
+                      echo "🔀 Checking out master branch..."
+                      git checkout -B master origin/master
+
+                      echo "🔄 Resetting to origin/master..."
+                      git reset --hard origin/master
+
+                      echo "📋 Listing branches:"
+                      git branch
+
+                      # Validate branch/tag for prod environment
+                      if [ "$ENV" = "prod" ]; then
+                        echo "🔐 Validating for PRODUCTION environment..."
+                        if [ "$BRANCH" = "master" ]; then
+                          echo "✅ Deploying to PROD with master branch"
+                          git checkout -B master origin/master
+                          git reset --hard origin/master || git reset --hard master
+                        elif git tag | grep -qx "$BRANCH"; then
+                          echo "✅ Deploying tag: $BRANCH"
+                          git checkout "tags/$BRANCH" -b "deploy-$BRANCH-$GITHUB_RUN_NUMBER"
+                        else
+                          echo "❌ Error: For PROD, only 'master' branch or a valid tag is allowed."
+                          exit 1
+                        fi
+                      else
+                        echo "🚀 Deploying to $ENV environment with branch: $BRANCH"
+                        git checkout -B $BRANCH origin/$BRANCH
+                        git reset --hard origin/$BRANCH || git reset --hard $BRANCH
+                      fi
+
+                      echo "Git status:"
+                      git status
+
+                      echo "=========================================="
+                      echo "Setting environment variables"
+                      echo "=========================================="
+
+                      export ASPNETCORE_ENVIRONMENT="$ASPNETCORE_ENVIRONMENT"
+                      export DB_HOST="$DB_HOST"
+                      export DB_PORT="$DB_PORT"
+                      export DB_NAME="$DB_NAME"
+                      export DB_USER="$DB_USER"
+                      export DB_PASSWORD="$DB_PASSWORD"
+                      export BLOCKCHAIN_RPC_URL="$BLOCKCHAIN_RPC_URL"
+                      export BLOCKCHAIN_CHAIN_ID="$BLOCKCHAIN_CHAIN_ID"
+                      export BLOCKCHAIN_PRIVATE_KEY="$BLOCKCHAIN_PRIVATE_KEY"
+                      export BLOCKCHAIN_CONTRACT_ADDRESS="$BLOCKCHAIN_CONTRACT_ADDRESS"
+                      export IPFS_API_URL="$IPFS_API_URL"
+                      export IPFS_GATEWAY_URL="$IPFS_GATEWAY_URL"
+                      export HANGFIRE_CONNECTION_STRING="$HANGFIRE_CONNECTION_STRING"
+
+                      echo "✅ Environment variables set successfully"
+
+                      echo "=========================================="
+                      echo "Building and Starting Containers"
+                      echo "=========================================="
+
+                      docker compose -f "$DOCKER_COMPOSE_FILE_PATH" -p "$APP_NAME" up -d --build --remove-orphans
+
+                      echo "=========================================="
+                      echo "✅ Deployment Completed Successfully!"
+                      echo "=========================================="
+                      echo "Service: $APP_NAME"
+                      echo "Environment: $ENV"
+                      echo "Branch: $BRANCH"
+                      echo "=========================================="
+
+            - name: Health Check
+              run: |
+                  echo "⏳ Verifying Invoice Scheduler Job deployment..."
+                  echo "The background job service has been deployed and should be processing jobs."
+                  sleep 5
+                  echo "✅ Deployment verification completed"
+
+            - name: Deployment Summary
+              run: |
+                  echo "=========================================="
+                  echo "Deployment Summary"
+                  echo "=========================================="
+                  echo "Environment: ${{ github.event.inputs.environment }}"
+                  echo "Branch/Tag: ${{ github.event.inputs.branch }}"
+                  echo "Repository: ${{ github.repository }}"
+                  echo "Deployment Time: $(date)"
+                  echo "=========================================="

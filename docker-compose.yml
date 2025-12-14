@@ -37,21 +37,21 @@ services:
             context: .
             dockerfile: Dockerfile
         container_name: invoice-scheduler-job
-        ports:
-            - "5000:8080"
-            - "5001:8081"
         environment:
-            - ASPNETCORE_ENVIRONMENT=Development
-            - ASPNETCORE_URLS=http://+:8080;https://+:8081
-            - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=invoice_system;Username=postgres;Password=yourpassword
-            - ConnectionStrings__HangfireConnection=Host=postgres;Port=5432;Database=hangfire_jobs;Username=postgres;Password=yourpassword
-            - Ipfs__ApiKey=${PINATA_API_KEY}
-            - Ipfs__ApiSecret=${PINATA_API_SECRET}
-            - Blockchain__RpcUrl=${ETHEREUM_RPC_URL:-https://rpc.ankr.com/eth_sepolia}
-            - Blockchain__PrivateKey=${ETHEREUM_PRIVATE_KEY}
-            - Blockchain__ContractAddress=${CONTRACT_ADDRESS}
+            - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+            - ConnectionStrings__DefaultConnection=Host=${DB_HOST:-postgres};Port=${DB_PORT:-5432};Database=${DB_NAME:-invoice_system};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-yourpassword}
+            - ConnectionStrings__HangfireConnection=Host=${DB_HOST:-postgres};Port=${DB_PORT:-5432};Database=hangfire_jobs;Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-yourpassword}
+            - Ipfs__ApiUrl=${IPFS_API_URL:-http://localhost:5001}
+            - Ipfs__GatewayUrl=${IPFS_GATEWAY_URL:-http://localhost:8080}
+            - Blockchain__RpcUrl=${BLOCKCHAIN_RPC_URL:-https://rpc.ankr.com/eth_sepolia}
+            - Blockchain__ChainId=${BLOCKCHAIN_CHAIN_ID:-11155111}
+            - Blockchain__PrivateKey=${BLOCKCHAIN_PRIVATE_KEY}
+            - Blockchain__ContractAddress=${BLOCKCHAIN_CONTRACT_ADDRESS}
+            - Hangfire__ConnectionString=${HANGFIRE_CONNECTION_STRING:-Host=postgres;Port=5432;Database=hangfire_jobs;Username=postgres;Password=yourpassword}
         depends_on:
             postgres:
+                condition: service_healthy
+            redis:
                 condition: service_healthy
         restart: unless-stopped
         volumes:
