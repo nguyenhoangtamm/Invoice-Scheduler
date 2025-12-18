@@ -168,9 +168,6 @@ jobs:
                       export JOBS_BATCH_CRON="$JOBS_BATCH_CRON"
                       export JOBS_BLOCKCHAIN_CRON="$JOBS_BLOCKCHAIN_CRON"
                       export JOBS_CONCURRENT_UPLOADS="$JOBS_CONCURRENT_UPLOADS"
-                      export JOBS_DRY_RUN_MODE="$JOBS_DRY_RUN_MODE"
-                      export JOBS_WORKER_ID="$JOBS_WORKER_ID"
-                      export IPFS_TIMEOUT_MS="$IPFS_TIMEOUT_MS"
 
                       echo "✅ Environment variables set successfully"
 
