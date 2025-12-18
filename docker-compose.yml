@@ -32,7 +32,14 @@ services:
             - Blockchain__ChainId=${BLOCKCHAIN_CHAIN_ID:-11155111}
             - Blockchain__PrivateKey=${BLOCKCHAIN_PRIVATE_KEY}
             - Blockchain__ContractAddress=${BLOCKCHAIN_CONTRACT_ADDRESS}
+            - Blockchain__TimeoutMs=${BLOCKCHAIN_TIMEOUT_MS:-120000}
             - Hangfire__ConnectionString=${HANGFIRE_CONNECTION_STRING:-Host=${DB_HOST:-postgres};Port=${DB_PORT:-5432};Database=${DB_NAME:-invoice_system};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-yourpassword}}
+            - Jobs__BatchSize=${JOBS_BATCH_SIZE:-4}
+            - Jobs__BatchesPerRun=${JOBS_BATCHES_PER_RUN:-3}
+            - Jobs__UploadCron=${JOBS_UPLOAD_CRON:-*/10\ *\ *\ *\ *\ *}
+            - Jobs__BatchCron=${JOBS_BATCH_CRON:-*/12\ *\ *\ *\ *\ *}
+            - Jobs__BlockchainCron=${JOBS_BLOCKCHAIN_CRON:-*/10\ *\ *\ *\ *\ *}
+            - Jobs__ConcurrentUploads=${JOBS_CONCURRENT_UPLOADS:-5}
         depends_on:
             redis:
                 condition: service_healthy
